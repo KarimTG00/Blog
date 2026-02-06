@@ -14,7 +14,7 @@ createDB();
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173", // origine de mon frontend
+    origin: ["http://localhost:5173", process.env.FRONT_URL], // origine de mon frontend
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true, // si vous avez besoin de cookies ou d'autres informations d'authentification
   }),
