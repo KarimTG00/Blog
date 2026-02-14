@@ -45,11 +45,12 @@ router.post("/admin", async (req, res) => {
   try {
     const admins = await admin.findOne({ email: email });
     if (admins) {
+      console.log(admins.password);
       const isMatch = await bcrypt.compare(password, admins.password);
       if (!isMatch) {
         return res.status(500).json({ msg: "mot de passe incorrect" });
       }
-      const accessToken = jwt.sign({ email: email }, process.env.jwt_Secret, {
+      const accessToken = jwt.sign({ email: email }, process.env.JWT_SECRET, {
         expiresIn: "1d",
       });
       res
