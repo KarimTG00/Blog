@@ -6,16 +6,9 @@ const jwt = require("jsonwebtoken");
 const articles = require("../models/articles");
 const articleModel = require("../models/articles");
 const traker = require("../models/traker");
-
+const bcrypt = require("bcrypt");
+const protect = require("../middlewares/authorization");
 const router = express.Router();
-
-// fonction pour obtenir le pays via l'ip
-async function getCountry(ip) {
-  const res = await fetch(`https://ipapi.co/${ip}/json/`);
-  const data = await res.json();
-  console.log(data);
-  return data.country_name; // "France"
-}
 
 // connexion des utilisateur a la newsLetter
 router.post("/user", async (req, res) => {
@@ -30,6 +23,20 @@ router.post("/user", async (req, res) => {
   }
 });
 
+router.get("/allUser", protect, async (req, res) => {
+  try {
+    const users = await user.find().sort({ createdAt: -1 });
+
+    const result = [];
+    users.forEach((el) => {
+      result.push({ email: el.email, createdAt: el.createdAt });
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+    console.log("an error ", error);
+  }
+});
 // verification des informations de l'administrateur
 
 router.post("/admin", async (req, res) => {
@@ -37,8 +44,11 @@ router.post("/admin", async (req, res) => {
 
   try {
     const admins = await admin.findOne({ email: email });
-    console.log(admin);
-    if (admins && admins.password === password) {
+    if (admins) {
+      const isMatch = await bcrypt.compare(password, admins.password);
+      if (!isMatch) {
+        return res.status(500).json({ msg: "mot de passe incorrect" });
+      }
       const accessToken = jwt.sign({ email: email }, process.env.jwt_Secret, {
         expiresIn: "1d",
       });
@@ -54,7 +64,7 @@ router.post("/admin", async (req, res) => {
   }
 });
 // ajout d'un nouvel article
-router.post("/new", async (req, res) => {
+router.post("/new", protect, async (req, res) => {
   const { json, values } = req.body; // données du formulaire d'ajout d'un article
   console.log(req.body);
   // sauvegarde du formulaire
@@ -83,9 +93,27 @@ router.get("/articles", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+router.get("/Adminarticles", protect, async (req, res) => {
+  try {
+    const article = await articles.find().sort({ createdAt: -1 });
+    res.status(200).json(article);
+  } catch (error) {
+    console.log("une erreur lors de la recuperation des articles");
+    res.status(500).json({ error: error.message });
+  }
+});
+router.get("/AdminAllarticles", protect, async (req, res) => {
+  try {
+    const article = await articles.find().sort({ createdAt: -1 });
+    res.status(200).json(article);
+  } catch (error) {
+    console.log("une erreur lors de la recuperation des articles");
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // recuperation du nombre d'articles
-router.get("/getArticles", async (req, res) => {
+router.get("/getArticles", protect, async (req, res) => {
   try {
     const article = await articles.find();
     res.status(200).json({ total: article.length });
@@ -113,38 +141,25 @@ router.get("/article/:id", async (req, res) => {
   }
 });
 
-// router.get("/dashboard", async (req, res) => {
-//   res.end("dans le dashboard");
-// });
-
 // tracking des visites du site
-router.post("/track", async (req, res) => {
-  console.log("VISITE :", {
-    url: req.body.url,
-    date: new Date(),
-    ip: req.ip,
-  });
-
+router.post("/track", protect, async (req, res) => {
   const ip = req.ip === "::1" ? "8.8.8.8" : req.ip;
-  console.log("IP :", ip);
-  // const pays = await getCountry(ip);
 
   try {
     const newLog = await new traker({
       url: req.body.url,
       ip: req.ip,
-      pays: "pas de pays",
     });
     await newLog.save();
     res.status(200).json({ msg: "parfait" });
-    console.log("new log added");
   } catch (error) {
     console.log("an error with save log", error.message);
     res.status(500).json({ msg: error.message });
   }
 });
 
-router.get("/getAllTrack", async (req, res) => {
+// recuperation de tous les logs de visite
+router.get("/getAllTrack", protect, async (req, res) => {
   // recuperation de tous les logs de visite
   try {
     const data = await traker.find();
@@ -156,7 +171,7 @@ router.get("/getAllTrack", async (req, res) => {
   }
 });
 
-router.get("/dayViews", async (req, res) => {
+router.get("/dayViews", protect, async (req, res) => {
   const now = new Date();
 
   // on definit le debut et la fin de la journée actuelle en UTC
@@ -196,7 +211,9 @@ router.get("/dayViews", async (req, res) => {
   }
 });
 
-router.put("/updateArticle/:id", async (req, res) => {
+// mise a jour d'un article via son id
+
+router.put("/updateArticle/:id", protect, async (req, res) => {
   const { id } = req.params;
   const { json, values } = req.body;
 
@@ -221,7 +238,8 @@ router.put("/updateArticle/:id", async (req, res) => {
   }
 });
 
-router.delete("/deleteArticle/:id", async (req, res) => {
+// suppression d'un article via son id
+router.delete("/deleteArticle/:id", protect, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -232,6 +250,27 @@ router.delete("/deleteArticle/:id", async (req, res) => {
     res.status(200).json({ msg: "Article deleted successfully" });
   } catch (error) {
     console.log("une erreur lors de la suppression de l'article");
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// endpoint de recherche d'articles par mots clés
+router.get("/search", async (req, res) => {
+  const { q } = req.query;
+  try {
+    const articlesFound = await articles
+      .find({ $text: { $search: q } }, { score: { $meta: "textScore" } })
+      .sort({ score: { $meta: "textScore" } });
+
+    console.log(articlesFound);
+    let result = [];
+    // filtrage des articles qui ont un score de pertinence supérieur à 1
+    for (el of articlesFound) {
+      result.push(el.title);
+    }
+    res.status(200).json(result);
+  } catch (error) {
+    console.log("une erreur lors de la recherche d'articles");
     res.status(500).json({ error: error.message });
   }
 });
