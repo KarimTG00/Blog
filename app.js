@@ -11,18 +11,20 @@ const port = process.env.PORT || 4000;
 createDB();
 
 // middlewares
-app.use(express.json());
 app.use(
   cors({
     origin: ["http://localhost:5173", "https://blog-frontent-ten.vercel.app"], // origine de mon frontend
     methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
+app.use(express.json());
 
 app.get("/favicon.ico", (req, res) => res.status(204));
 
 // routes
+console.log(port);
 
 app.use("/", router);
 app.use(Notfound);
