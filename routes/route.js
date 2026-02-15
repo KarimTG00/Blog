@@ -267,8 +267,9 @@ router.get("/search", async (req, res) => {
     let result = [];
     // filtrage des articles qui ont un score de pertinence supérieur à 1
     for (el of articlesFound) {
-      result.push(el.title);
+      result.push({ title: el.title });
     }
+    console.log(result);
     res.status(200).json(result);
   } catch (error) {
     console.log("une erreur lors de la recherche d'articles");
