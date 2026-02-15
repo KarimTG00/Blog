@@ -16,7 +16,6 @@ app.use(
   cors({
     origin: ["http://localhost:5173", "https://blog-frontent-ten.vercel.app"], // origine de mon frontend
     methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true, // si vous avez besoin de cookies ou d'autres informations d'authentification
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
