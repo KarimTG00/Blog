@@ -17,11 +17,9 @@ const protect = async (req, res, next) => {
           })
           .select("-password"); // on recup├®re les information de l'utilisateur sauf sont password
         if (!req.authUser) {
-          console.log("utilisateur non trouv├®");
           res.status(401).json({ msg: "utilisateur non trouv├®" });
           return;
         }
-        console.log("utilisateur identifi├®");
         next();
       } catch (error) {
         const token = req.headers.authorization.split(" ")[1]; // on recup├®re les elements du token

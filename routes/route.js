@@ -45,7 +45,6 @@ router.post("/admin", async (req, res) => {
   try {
     const admins = await admin.findOne({ email: email });
     if (admins) {
-      console.log(admins.password);
       const isMatch = await bcrypt.compare(password, admins.password);
       if (!isMatch) {
         return res.status(500).json({ msg: "mot de passe incorrect" });
@@ -204,7 +203,6 @@ router.get("/dayViews", protect, async (req, res) => {
         tabs.push(el);
       }
     }
-    console.log(tabs);
     res.status(200).json(tabs);
   } catch (error) {
     console.log("une erreur ", error);
