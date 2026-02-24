@@ -148,9 +148,10 @@ router.post("/track", protect, async (req, res) => {
   try {
     const newLog = await new traker({
       url: req.body.url,
-      ip: req.ip,
+      ip: ip,
     });
     await newLog.save();
+    console.log(newLog);
     res.status(200).json({ msg: "parfait" });
   } catch (error) {
     console.log("an error with save log", error.message);
