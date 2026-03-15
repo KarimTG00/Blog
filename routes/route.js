@@ -85,11 +85,25 @@ router.post("/new", protect, async (req, res) => {
 });
 // recuperation de tous les articles
 router.get("/articles", async (req, res) => {
+  const { page } = parseInt(req.query.page) || 1;
+  const limit = 5;
+  const skip = (page - 1) * limit;
   try {
-    const article = await articles.find().sort({ createdAt: -1 });
-    res.status(200).json(article);
+    const article = await articles
+      .find()
+      .skip(0)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const totalArticles = await articles.countDocuments();
+    const nextPage = skip + article.length < totalArticles ? page + 1 : null;
+
+    res.status(200).json({
+      data: article,
+      nextPage: nextPage,
+    });
   } catch (error) {
-    console.log("une erreur lors de la recuperation des articles");
+    console.log("une erreur lors de la recuperation des articles", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -119,6 +133,22 @@ router.get("/getArticles", protect, async (req, res) => {
     res.status(200).json({ total: article.length });
   } catch (error) {
     console.log("une erreur lors de la recuperation des articles");
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/otherArticles", async (req, res) => {
+  try {
+    const otherArticles = await articles
+      .find()
+      .sort({ createdAt: -1 })
+      .limit(5);
+    res.status(200).json({ otherArticle: otherArticles });
+  } catch (error) {
+    console.log(
+      "une erreur lors de la recuperation des articles",
+      error.message,
+    );
     res.status(500).json({ error: error.message });
   }
 });
